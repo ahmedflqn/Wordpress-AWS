@@ -1,0 +1,278 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description:  WordPress on AWS VPC 
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: WP-VPC
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+          - Key: Name
+            Value: WP-IGW
+
+  InternetGatewayAttachment:
+          Type: AWS::EC2::VPCGatewayAttachment
+          Properties:
+              InternetGatewayId: !Ref InternetGateway
+              VpcId: !Ref VPC
+            
+  PublicSubnet1: 
+          Type: AWS::EC2::Subnet
+          Properties:
+              VpcId: !Ref VPC
+              AvailabilityZone: !Select [ 0, !GetAZs '' ]
+              CidrBlock: 10.0.0.0/24
+              MapPublicIpOnLaunch: true
+              Tags: 
+                  - Key: Name 
+                    Value: WP-PS1
+
+  PublicSubnet2: 
+      Type: AWS::EC2::Subnet
+      Properties:
+          VpcId: !Ref VPC
+          AvailabilityZone: !Select [ 1, !GetAZs '' ]
+          CidrBlock: 10.0.1.0/24
+          MapPublicIpOnLaunch: true
+          Tags: 
+              - Key: Name 
+                Value: WP-PS2
+
+  PrivateAppSubnet1: 
+      Type: AWS::EC2::Subnet
+      Properties:
+          VpcId: !Ref VPC
+          AvailabilityZone: !Select [ 0, !GetAZs '' ]
+          CidrBlock: 10.0.16.0/20
+          MapPublicIpOnLaunch: false
+          Tags: 
+              - Key: Name 
+                Value: WP-APP1
+
+  PrivateAppSubnet2: 
+      Type: AWS::EC2::Subnet
+      Properties:
+          VpcId: !Ref VPC
+          AvailabilityZone: !Select [ 1, !GetAZs '' ]
+          CidrBlock: 10.0.32.0/20
+          MapPublicIpOnLaunch: false
+          Tags: 
+              - Key: Name 
+                Value: WP-APP2
+          
+  PrivateDBSubnet1: 
+      Type: AWS::EC2::Subnet
+      Properties:
+          VpcId: !Ref VPC
+          AvailabilityZone: !Select [ 0, !GetAZs '' ]
+          CidrBlock: 10.0.48.0/20
+          MapPublicIpOnLaunch: false
+          Tags: 
+              - Key: Name 
+                Value: WP-DB1
+
+  PrivateDBSubnet2: 
+      Type: AWS::EC2::Subnet
+      Properties:
+          VpcId: !Ref VPC
+          AvailabilityZone: !Select [ 1, !GetAZs '' ]
+          CidrBlock: 10.0.64.0/20
+          MapPublicIpOnLaunch: false
+          Tags: 
+              - Key: Name 
+                Value: WP-DB2
+
+
+  NatGateway1EIP:
+          Type: AWS::EC2::EIP
+          DependsOn: InternetGatewayAttachment
+          Properties: 
+              Domain: vpc
+
+  NatGateway2EIP:
+      Type: AWS::EC2::EIP
+      DependsOn: InternetGatewayAttachment
+      Properties:
+          Domain: vpc
+
+  NatGateway1: 
+      Type: AWS::EC2::NatGateway
+      Properties: 
+          AllocationId: !GetAtt NatGateway1EIP.AllocationId
+          SubnetId: !Ref PublicSubnet1
+
+  NatGateway2: 
+      Type: AWS::EC2::NatGateway
+      Properties:
+          AllocationId: !GetAtt NatGateway2EIP.AllocationId
+          SubnetId: !Ref PublicSubnet2
+
+  PublicRouteTable:
+          Type: AWS::EC2::RouteTable
+          Properties: 
+              VpcId: !Ref VPC
+              Tags: 
+                  - Key: Name 
+                    Value: WP-PubRouteTable
+
+  DefaultPublicRoute: 
+      Type: AWS::EC2::Route
+      DependsOn: InternetGatewayAttachment
+      Properties: 
+          RouteTableId: !Ref PublicRouteTable
+          DestinationCidrBlock: 0.0.0.0/0
+          GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+          RouteTableId: !Ref PublicRouteTable
+          SubnetId: !Ref PublicSubnet1
+
+  PublicSubnet2RouteTableAssociation:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+          RouteTableId: !Ref PublicRouteTable
+          SubnetId: !Ref PublicSubnet2
+
+
+  PrivateRouteTable1:
+      Type: AWS::EC2::RouteTable
+      Properties: 
+          VpcId: !Ref VPC
+          Tags: 
+              - Key: Name 
+                Value: WP-PrRouteTable1
+  
+  PrivateRouteTable2:
+      Type: AWS::EC2::RouteTable
+      Properties: 
+          VpcId: !Ref VPC
+          Tags: 
+              - Key: Name 
+                Value: WP-PrRouteTable2
+
+  PrivateRoute1:
+      Type: AWS::EC2::Route
+      Properties:
+        RouteTableId: !Ref PrivateRouteTable1
+        DestinationCidrBlock: 0.0.0.0/0
+        NatGatewayId: !Ref NatGateway1
+
+  PrivateRoute2:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway2
+
+
+  PrivateAppSubnet1RouteTableAssociation:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+          RouteTableId: !Ref PrivateRouteTable1
+          SubnetId: !Ref PrivateAppSubnet1
+
+
+  PrivateAppSubnet2RouteTableAssociation:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+          RouteTableId: !Ref PrivateRouteTable2
+          SubnetId: !Ref PrivateAppSubnet2
+
+  PrivateSubnetDBR1outeTableAssociation:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+          RouteTableId: !Ref PrivateRouteTable1
+          SubnetId: !Ref PrivateDBSubnet1
+
+  PrivateSubnetDB2RouteTableAssociation:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+          RouteTableId: !Ref PrivateRouteTable2
+          SubnetId: !Ref PrivateDBSubnet2
+
+
+  WP-APP-S.G:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: My Security Group
+      VpcId: <your-vpc-id>
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 10.0.0.0/16 
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          
+
+  WP-EFS-S.G:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: My Security Group
+      VpcId: <your-vpc-id>
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 2049
+          ToPort: 2049
+          SourceSecurityGroupId: !Ref WP-APP-S.G
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+
+
+  WP-RDS-S.G:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: My Security Group
+      VpcId: <your-vpc-id>
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: !Ref WP-APP-S.G
+        
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+
+
+
+  
+  WP-EC2InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: WP-EC2InstanceRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      Path: "/"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonElasticFileSystemFullAccess
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+
+  WP-EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: WP-EC2InstanceProfile
+      Roles:
+        - !Ref WP-EC2InstanceRole
+
+
+
+
