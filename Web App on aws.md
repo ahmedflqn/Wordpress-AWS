@@ -1,28 +1,28 @@
 ﻿## **Hosting WordPress on AWS Cloud**
 **In this guide, We will Create a WordPress architecture that is secure, highly available, fault-tolerant and also scalable.**
 
-### 1- Creating our architecture diagram**
+### 1- Creating our architecture diagram
 ![Architecture diagram
 ](https://github.com/ahmedflqn/Wordpress-AWS/blob/main/WordPress%20architecture%20diagram%20(1).png?raw=true)
 
 **Architecture components**
 
  - Cloudfront to cache closer to end user for faster delivery
- - Route 53 to register our  domain name or host existing one. Allows us to create some aliases that binds together our AWS resources so we will be able to register our domain name with cloudfront 
- - Web instances in private subnets for maximum secuirty, we will use Session manager to connect to them instead of creating a bastion host.
- instances will run in auto scaling group for scalability with elastic load balancer to distribute traffic and ensure high availability
- - Amazon RDS to host WordPress  database with Multi-AZ deployment. It will be deployed in private subnet for security and we will allow access only from our instances security group.
- - Internet Gateway to enable communication between resources in vpc and internet.
- - NAT Gateway in each availability Zone to enable EC2  instances in private subnet to access the internet
+ - Route 53 to register our  domain name or host existing one. It allows us to create some aliases that bind together our AWS resources so we will be able to register our domain name with Cloudfront 
+ - Web instances in private subnets for maximum security, we will use Session Manager to connect to them instead of creating a bastion host.
+ instances will run in an auto-scaling group for scalability with an elastic load balancer to distribute traffic and ensure high availability
+ - Amazon RDS to host WordPress  database with Multi-AZ deployment. It will be deployed in a private subnet for security and we will allow access only from our instance security group.
+ - Internet Gateway to enable communication between resources in VPC and the internet.
+ - NAT Gateway in each availability Zone to enable EC2  instances in a private subnet to access the internet
  - Amazon EFS file system so EC2 can access shared WordPress data via EFS Mount Target in every availability Zone.
-
+---
 **2- Create our VPC using AWS Cloudformation**
-This  template  deploys  a  VPC,  with  2  public  and 4 private  subnets  spread  across  two    Availability  Zones.  It  deploys  an  internet  gateway,  with  a  default  route  on  the  public  subnets.  It  deploys  a  pair  of  NAT  gateways  (one  in  each  AZ),  and  default  routes  for  them  in  the  private  subnets. Creates security groups for our App, EFS, RDS instances
+This  template  deploys  a  VPC,  with  2  public  and 4 private  subnets  spread  across  two    Availability  Zones.  It  deploys  an  internet  gateway,  with  a  default  route  on  the  public  subnets.  It  deploys  a  pair  of  NAT  gateways  (one  in  each  AZ),  and  default  routes  for  them  in  the  private  subnets. Creates security groups for our App, EFS, and RDS instances
 and an EC2 instance role.
 
 [Cloudformation Template](https://github.com/ahmedflqn/Wordpress-AWS/blob/main/Cloudformation_WordPress.yml)
   
-
+---
 ### 3- Creating our RDS database
 
    Before we create our RDS we need to create our RDS Subnet Group
@@ -33,20 +33,24 @@ and an EC2 instance role.
 
 ![enter image description here](https://github.com/ahmedflqn/Wordpress-AWS/blob/main/DB1.PNG?raw=true)
 
-   We will choose free tier to keep our cost low as our purpose. as this is a guide,
-    but in production environment we would pick production and Multi-AZ deployment
+   We will choose the free tier to keep our costs low because this is a guide,
+   But in the production environment, we would pick production and Multi-AZ deployment
+
+   
 ![enter image description here](https://github.com/ahmedflqn/Wordpress-AWS/blob/main/DB2.PNG?raw=true)
    
-  Make sure to save your database credentials
+ 
+ Make sure to save your database credentials
+ 
 ![enter image description here](https://github.com/ahmedflqn/Wordpress-AWS/blob/main/DB3.PNG?raw=true)
 
-   Here we will choose the security group that we created earlier for the RDS with Cloudformation. 
-    Also make sure public access is set to No
+   Here we will choose the security group we created earlier for the RDS with Cloudformation. 
+    Also, make sure public access is set to No
 ![enter image description here](https://github.com/ahmedflqn/Wordpress-AWS/blob/main/db22.PNG?raw=true)
 ### 3- Creating our EFS
 
    Move to the EFS Console 
-   Click on Creat file system
+   Click on Create file system
 ![enter image description here](https://github.com/ahmedflqn/Wordpress-AWS/blob/main/EFS1.PNG?raw=true)
 
    Make sure you mount EFS to the Private WordPress APP subnets and choose our WP-EFS-S.G Security Group
@@ -54,25 +58,25 @@ and an EC2 instance role.
 ![enter image description here](https://github.com/ahmedflqn/Wordpress-AWS/blob/main/EFS2.PNG?raw=true)
       
 
-
+---
 ### 4-Create our launch template
 
-   Move to the EC2 console under instances choose launch template 
+   Move to the EC2 console under instances and choose the launch template we created earlier 
 ![enter image description here](https://github.com/ahmedflqn/Wordpress-AWS/blob/main/launchtemplate1.PNG?raw=true)
       
- Here we will choose t2.micro because included in the free tier
- we will not need key pair as we will connect to instance using session manager 
+ Here we will choose t2.micro because it's included in the free tier.
+ we will not need a key pair as we will connect to the instance using Session Manager 
 ![enter image description here](https://github.com/ahmedflqn/Wordpress-AWS/blob/main/launchtemplate2.PNG?raw=true)
 
    In advanced details we will need first to pick our EC2 WP instances profile 
-         that we created earlier from the cloudformation template. 
-         IAM roles created allow us to connect our ec2 through Session Manager 
+         that we created earlier from the CloudFormation template. 
+         IAM roles created allow us to connect our ec2 through Session Manager, 
          and that will be the only way because we didn't create a bastion host.
          We will allow our instance to connect to EFS and have full access.
 ![enter image description here](https://github.com/ahmedflqn/Wordpress-AWS/blob/main/Launchtemplate3.PNG?raw=true)
          
-   In user data Here we will add the commands in order to automate 
-           preparing our ec2 instance to host our wordpress website 
+   In user data, We will add the commands to automate the  
+           preparation of our ec2 instance in order to host our WordPress website.
 ![enter image description here](https://github.com/ahmedflqn/Wordpress-AWS/blob/main/Launchtemplate4.PNG?raw=true)
 
 **User data script**
@@ -148,25 +152,26 @@ rm latest.tar.gz
 ```
 
 
+---
 
-
-### 5-Create a target group for loadbalancer
+### 5-Create a target group for load balancer
 Make sure you choose instances as the target type and HTTP as the listening protocol
 ![enter image description here](https://github.com/ahmedflqn/Wordpress-AWS/blob/main/Targetgroup1.PNG?raw=true)
 
-Here don't register target we will add our autoscaling group later
+Here don't register targets. We will add our autoscaling group later
 ![enter image description here](https://github.com/ahmedflqn/Wordpress-AWS/blob/main/targetgroup2.PNG?raw=true)
 
-
+---
 ### 6-Create our load balancer
-Before creating our load balancer we need to create load balancer Security group and allow HTTP, HTTPS
+Before creating our load balancer. we need to create a load balancer Security group and allow HTTP, HTTPS
 ![enter image description here](https://github.com/ahmedflqn/Wordpress-AWS/blob/main/sg%20for%20loadbalancer.PNG?raw=true)
 
-after that we need to change our app securtiy group to allow connection from load balancer on HTTP
+after that, we need to change our app security group to allow connection from the load balancer on HTTP
 ![enter image description here](https://github.com/ahmedflqn/Wordpress-AWS/blob/main/edit-app-sg.PNG?raw=true)
 
 **Now let's create our load balancer**
-In EC2 dashboard go to load balancing and choose load balancer 
+
+In the EC2 dashboard go to load balancing and choose load balancer, 
 and press on create load balancer
 
 Here make sure to choose our public subnets PS1, PS2
@@ -183,8 +188,8 @@ We will choose our app subnets
 In group size here you can choose what you want for this settings. For now we leave it 1 to lower cost.
 ![enter image description here](https://github.com/ahmedflqn/Wordpress-AWS/blob/main/asg1.PNG?raw=true)
 
-After creating our auto scaling group we will create our database for the WordPress, and test our App through Load balancer DNS
-first we will need to connect to our ec2 Instance through session manager
+After creating our auto-scaling group we will create our database for WordPress, and test our App through Load balancer DNS
+first, we will need to connect to our ec2 Instance through Session Manager
 ![enter image description here](https://github.com/ahmedflqn/Wordpress-AWS/blob/main/session%20connect.PNG?raw=true)
 
   ```
@@ -206,15 +211,16 @@ first we will need to connect to our ec2 Instance through session manager
 Now let's test our app through ALB DNS
 ![enter image description here](https://github.com/ahmedflqn/Wordpress-AWS/blob/main/wp1.PNG?raw=true)
 Our web App is running 
-lets connect our database
+let's connect our database
 ![enter image description here](https://github.com/ahmedflqn/Wordpress-AWS/blob/main/wordpress%20database.PNG?raw=true)
 ![enter image description here](https://github.com/ahmedflqn/Wordpress-AWS/blob/main/wordpresstest1.PNG?raw=true)
-Now after we check everything is fine lets complete our remaining steps.
+Now after we check everything is fine let's complete our remaining steps.
 
-### 8-Create Cloudfront distrbution
+---
+### 8-Create CloudFront distribution
 
 Choose your Load balancer 
-Select HTTP as the default option for listener protocl.
+Select HTTP as the default option for listener protocol.
 ![enter image description here](https://github.com/ahmedflqn/Wordpress-AWS/blob/main/cloudfront1.PNG?raw=true)
 
 For the Viewer setting, select HTTP and HTTPS, or you can choose to redirect HTTP to HTTPS. However, if you opt for the redirect option, you will need to request an SSL certificate.
@@ -223,9 +229,10 @@ Make sure to choose “GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE” as these 
 ![enter image description here](https://github.com/ahmedflqn/Wordpress-AWS/blob/main/cloudfront2.PNG?raw=true)
 
 ![enter image description here](https://github.com/ahmedflqn/Wordpress-AWS/blob/main/cloudfront3.PNG?raw=true)
-Now we can access our wep app through CloudFront Distribution domain name 
+Now we can access our web app through CloudFront Distribution domain name 
 
-### 9-Register CloudFront distrbution with route 53
+---
+### 9-Register CloudFront distribution with route 53
 
 Sign in to the AWS Management Console and open the Route 53 console.
 Create a hosted zone in Route 53 for the domain you want to associate with your CloudFront distribution. 
@@ -237,13 +244,13 @@ Next in the Route 53 console, click on "Create Record Set" to create a new recor
 
 For record name enter the domain name or subdomain you want to associate with the CloudFront distribution (e.g., project.wordpressonaws.com).
 Type: Select "A - IPv4 address".
-Alias: Select "Yes".
+Alias: Select "Yes"
 Alias Target: Click on the "Alias Target" field and select your CloudFront distribution from the dropdown list. It should be listed under the "CloudFront distributions" section.
 Click on "Create" to save the record set.
-
+---
 **Now that was the final step.
-We have completed all steps required to host our WordPress App on AWS.
-Insert you domain in your browser and create your WordPress Website.**
+We have completed all the steps required to host our WordPress App on AWS.
+Insert your domain in your browser and create your WordPress Website.**
 ![enter image description here](https://github.com/ahmedflqn/Wordpress-AWS/blob/main/wp2.PNG?raw=true)
 
 
