@@ -3,7 +3,7 @@
 
 ### 1- Creating our architecture diagram
 ![Architecture diagram
-](https://github.com/ahmedflqn/Wordpress-AWS/blob/main/Media/WordPress%20architecture%20diagram%20(1).png?raw=true)
+](https://github.com/ahmedflqn/Wordpress-AWS/blob/main/Media/WordPress%20architecture%20diagram%20(3).png?raw=true)
 
 **Architecture components**
 
