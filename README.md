@@ -14,7 +14,7 @@
  - Amazon RDS to host WordPress  database with Multi-AZ deployment. It will be deployed in a private subnet for security and we will allow access only from our instance security group.
  - Internet Gateway to enable communication between resources in VPC and the internet.
  - NAT Gateway in each availability Zone to enable EC2  instances in a private subnet to access the internet
- - Amazon EFS file system so EC2 can access shared WordPress data via EFS Mount Target in every availability Zone.
+ - Amazon EFS is our shared file storage for our web app so EC2 can access shared WordPress data via EFS Mount Target in every availability Zone.
 ---
 ### 2- Create our VPC using AWS Cloudformation
 This  template  deploys  a  VPC,  with  2  public  and 4 private  subnets  spread  across  two    Availability  Zones.  It  deploys  an  internet  gateway,  with  a  default  route  on  the  public  subnets.  It  deploys  a  pair  of  NAT  gateways  (one  in  each  AZ),  and  default  routes  for  them  in  the  private  subnets. Creates security groups for our App, EFS, and RDS instances
